@@ -59,14 +59,26 @@ Si vous préférez ne pas utiliser Pipenv :
 **Windows :**
 ```bash
 python -m venv env
+```
+
+```bash
 env\Scripts\activate
+```
+
+```bash
 pip install -r requirements.txt
 ```
 
 **Mac / Linux :**
 ```bash
 python3 -m venv env
+```
+
+```bash
 source env/bin/activate
+```
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -76,6 +88,9 @@ Appliquez les migrations pour créer les tables nécessaires (SQLite par défaut
 
 ```bash
 python manage.py makemigrations
+```
+
+```bash
 python manage.py migrate
 ```
 
