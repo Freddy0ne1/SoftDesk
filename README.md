@@ -1,69 +1,145 @@
-# SoftDesk API
+# SoftDesk API 🚀
 
-API RESTful développée avec Django REST Framework pour la gestion de projets et de tickets de support technique.
+API RESTful développée avec **Django REST Framework** pour gérer des problèmes techniques (Issue Tracking System). Cette application permet aux utilisateurs de gérer des projets, d'ajouter des contributeurs, et de suivre des problèmes (issues) et des commentaires.
 
-## Technologies utilisées
+## 📋 Fonctionnalités
 
-- **Python** avec Django
-- **Django REST Framework** pour l'API
-- **PyJWT** pour l'authentification par tokens
-- **Pipenv** pour la gestion des dépendances
+* **Authentification JWT :** Système sécurisé par tokens (Access & Refresh) via `djangorestframework-simplejwt`.
+* **Gestion des Utilisateurs :** Inscription respectant les normes RGPD (âge minimum, consentement).
+* **Gestion des Projets :** Création de projets (Back-end, Front-end, iOS, Android).
+* **Permissions Avancées :**
+    * L'auteur d'une ressource a tous les droits (Lecture/Écriture/Suppression).
+    * Les contributeurs d'un projet ont un accès en lecture seule.
+    * Les utilisateurs externes n'ont aucun accès.
+* **Suivi des Problèmes :** Gestion des tâches, bugs et améliorations.
 
-## Prérequis
+## 🛠️ Prérequis
 
-- Python 3.x
-- Pipenv
+* Python 3.x
+* Git
+* Pipenv (Recommandé pour la gestion des environnements virtuels)
 
-## Installation
+## ⚙️ Installation
 
-### 1. Installer les dépendances
+Ce projet utilise **Pipenv** pour une gestion moderne et sécurisée des dépendances.
+
+### 1. Cloner le projet
+
+```bash
+git clone https://github.com/Freddy0ne1/SoftDesk
+cd SoftDesk
+```
+
+### 2. Installer les dépendances
+
+#### Option A : Avec Pipenv (Recommandé)
+
+Si vous n'avez pas Pipenv, installez-le :
+
+```bash
+pip install pipenv
+```
+
+Installez ensuite l'environnement et les dépendances :
+
 ```bash
 pipenv install
 ```
 
-Si le Pipfile n'est pas configuré, installez manuellement les packages nécessaires :
-```bash
-pipenv install django djangorestframework pyjwt
-```
+Activez l'environnement virtuel :
 
-### 2. Activer l'environnement virtuel
 ```bash
 pipenv shell
 ```
 
-### 3. Configurer la base de données
+#### Option B : Méthode Classique (venv & pip)
 
-Créer les migrations :
+Si vous préférez ne pas utiliser Pipenv :
+
+**Windows :**
 ```bash
-python manage.py makemigrations
+python -m venv env
+env\Scripts\activate
+pip install -r requirements.txt
 ```
 
-Appliquer les migrations :
+**Mac / Linux :**
 ```bash
+python3 -m venv env
+source env/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. Configurer la base de données
+
+Appliquez les migrations pour créer les tables nécessaires (SQLite par défaut) :
+
+```bash
+python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 4. Créer un superutilisateur
+### 4. Créer un administrateur (Superuser)
+
+Pour accéder à l'interface d'administration Django :
+
 ```bash
 python manage.py createsuperuser
 ```
 
-Suivez les instructions pour définir un nom d'utilisateur et un mot de passe.
+### 5. Lancer le serveur
 
-### 5. Lancer le serveur de développement
 ```bash
 python manage.py runserver
 ```
 
-Le serveur sera accessible à l'adresse : `http://127.0.0.1:8000/`
+L'API est maintenant accessible à l'adresse : **http://127.0.0.1:8000/**
 
-## Accès
+## 🔑 Utilisation de l'API
 
-- **API** : `http://127.0.0.1:8000/api/`
-- **Interface d'administration** : `http://127.0.0.1:8000/admin/`
+Toutes les requêtes (sauf l'inscription et le login) nécessitent une authentification. Vous devez inclure le header suivant dans vos requêtes :
 
-## Authentification
+```
+Authorization: Bearer <votre_access_token>
+```
 
-L'API utilise l'authentification par token JWT (JSON Web Token).
-Mais pour le moment je n'ai rien fait
+### Authentification
 
+* **Inscription :** `POST /api/users/`
+* **Connexion (Obtenir les tokens) :** `POST /api/token/`
+    * Renvoie un `access token` (valide 1h) et un `refresh token` (valide 24h).
+* **Rafraîchir le token :** `POST /api/token/refresh/`
+
+### Endpoints Principaux
+
+| Ressource | URL | Méthodes Autorisées |
+|-----------|-----|---------------------|
+| Projets | `/api/projects/` | GET, POST |
+| Détail Projet | `/api/projects/{id}/` | GET, PUT, DELETE |
+| Contributeurs | `/api/contributors/` | GET, POST |
+| Issues | `/api/issues/` | GET, POST |
+| Commentaires | `/api/comments/` | GET, POST |
+
+## 📚 Documentation
+
+Pour plus de détails sur l'utilisation de chaque endpoint, consultez la documentation interactive de l'API disponible à l'adresse suivante une fois le serveur lancé :
+
+* **Swagger UI :** http://127.0.0.1:8000/swagger/
+* **ReDoc :** http://127.0.0.1:8000/redoc/
+
+## 🔒 Sécurité & Conformité RGPD
+
+* Âge minimum requis pour l'inscription : 15 ans
+* Consentement obligatoire pour le traitement des données
+* Système de permissions granulaires
+* Authentification sécurisée par JWT
+
+
+## 👤 Auteur
+
+**Freddy0ne1**
+* GitHub : [@Freddy0ne1](https://github.com/Freddy0ne1)
+
+---
+
+*Développé avec ❤️ en utilisant Django REST Framework*

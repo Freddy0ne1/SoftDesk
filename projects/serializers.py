@@ -12,7 +12,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source="author.username")
 
     # On force le format Jour-Mois-Année Heure:Minute
-    #created_time = CREATE_TIME
+    created_time = CREATE_TIME
 
     class Meta:
         model = Project
@@ -31,7 +31,7 @@ class ContributorSerializer(serializers.ModelSerializer):
     )
     
     # On force le format Jour-Mois-Année Heure:Minute
-    #created_time = CREATE_TIME
+    created_time = CREATE_TIME
     
     # On peut faire pareil pour le projet si tu veux voir son nom au lieu de son ID
     project = serializers.SlugRelatedField(
@@ -57,7 +57,7 @@ class IssueSerializer(serializers.ModelSerializer):
     )
     
     # On force le format Jour-Mois-Année Heure:Minute
-    #created_time = CREATE_TIME
+    created_time = CREATE_TIME
     
     # Pour le projet, on choisit via son nom exact (ou tu peux laisser l'ID par défaut si tu préfères)
     project = serializers.SlugRelatedField(
@@ -74,7 +74,7 @@ class CommentSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source="author.username")
     
     # On force le format Jour-Mois-Année Heure:Minute
-    #created_time = CREATE_TIME
+    created_time = CREATE_TIME
     
     # Pour lier à l'issue, on utilise son ID (par défaut) car les titres peuvent être longs ou en doublon
     # Mais on peut afficher le titre si tu veux (via un SerializerMethodField), restons simple pour l'instant.
