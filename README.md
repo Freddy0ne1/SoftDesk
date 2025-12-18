@@ -128,24 +128,23 @@ Authorization: Bearer <votre_access_token>
 
 | Ressource | URL | Méthodes Autorisées |
 |-----------|-----|---------------------|
+| Users | `/api/users/` | GET, POST |
+| Détail User | `/api/users/{id}/` | GET, PUT, DELETE |
 | Projets | `/api/projects/` | GET, POST |
 | Détail Projet | `/api/projects/{id}/` | GET, PUT, DELETE |
 | Contributeurs | `/api/contributors/` | GET, POST |
+| Détail Contributeur | `/api/contributors/{id}/` | GET, PUT, DELETE |
 | Issues | `/api/issues/` | GET, POST |
+| Détail Issue | `/api/issues/{id}/` | GET, PUT, DELETE |
 | Commentaires | `/api/comments/` | GET, POST |
+| Détail Commentaire | `/api/comments/{id}/` | GET, PUT, DELETE |
 
-## 📚 Documentation
-
-Pour plus de détails sur l'utilisation de chaque endpoint, consultez la documentation interactive de l'API disponible à l'adresse suivante une fois le serveur lancé :
-
-* **Swagger UI :** http://127.0.0.1:8000/swagger/
-* **ReDoc :** http://127.0.0.1:8000/redoc/
 
 ## 🔒 Sécurité & Conformité RGPD
 
 * Âge minimum requis pour l'inscription : 15 ans
 * Consentement obligatoire pour le traitement des données
-* Système de permissions granulaires
+* Système de permissions 
 * Authentification sécurisée par JWT
 
 
