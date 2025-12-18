@@ -27,7 +27,6 @@ Ce projet utilise **Pipenv** pour une gestion moderne et sécurisée des dépend
 
 ```bash
 git clone https://github.com/Freddy0ne1/SoftDesk
-cd SoftDesk
 ```
 
 ### 2. Installer les dépendances
