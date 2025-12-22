@@ -49,15 +49,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         Contributor.objects.create(user=user, project=project)
 
 
-class ProjectListViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Gestion des projets (Liste des projets).
-    """
-    queryset = Project.objects.all()
-    serializer_class = ProjectListSerializer
-    permission_classes = [IsOwnerOrSuperUser]
-
-
 class ContributorViewSet(viewsets.ModelViewSet):
     """
     Gestion des contributeurs d'un projet.
