@@ -1,18 +1,17 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 from projects.models import Project
 
+
 class IsAuthorOrReadOnly(BasePermission):
     """
-    Règle : 
+    Règle :
     - Tout le monde (authentifié) peut LIRE (GET, HEAD, OPTIONS).
     - Seul l'AUTEUR peut MODIFIER ou SUPPRIMER (PUT, DELETE).
     """
+
     def has_object_permission(self, request, view, obj):
-        # Si c'est une méthode de lecture, on autorise
         if request.method in SAFE_METHODS:
             return True
-        
-        # Sinon (modification), on vérifie que c'est bien l'auteur
         return obj.author == request.user
 
 
@@ -23,29 +22,61 @@ class IsProjectContributor(BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
-        # 1. On trouve d'abord quel est le projet concerné
-        
-        # Si l'objet est directement un Projet
+        # 1. Récupération du projet parent
         if isinstance(obj, Project):
             project = obj
-
-        # Si l'objet est une Issue (il a un attribut "project")
         elif hasattr(obj, "project"):
             project = obj.project
-
-        # Si l'objet est un Commentaire (il a un attribut "issue" qui a un attribut "project")
         elif hasattr(obj, "issue"):
             project = obj.issue.project
-
-        # Si on n'arrive pas à trouver de projet, par sécurité, on bloque
         else:
             return False
 
-        # 2. On vérifie les droits d'accès
-        # L'utilisateur passe s'il est dans la liste des contributeurs...
+        # 2. Vérifications
+        # Grâce à related_name='contributors', cette ligne fonctionne parfaitement :
         is_contributor = project.contributors.filter(user=request.user).exists()
-        
-        # ... OU s'il est l'auteur du projet (le patron) !
-        is_author = (project.author == request.user)
+
+        # On n'oublie pas le chef de projet !
+        is_author = project.author == request.user
 
         return is_contributor or is_author
+
+
+class IsProjectAuthor(BasePermission):
+    """
+    Permission spécifique pour la gestion des contributeurs.
+    Seul l'auteur du projet peut AJOUTER ou SUPPRIMER des membres.
+    """
+
+    def has_permission(self, request, view):
+        # Cette méthode sécurise le POST (l'ajout d'un contributeur)
+        if request.method == "POST":
+            # 1. On récupère le nom du projet envoyé dans le JSON
+            project_name = request.data.get("project")
+
+            if not project_name:
+                return False  # Pas de projet spécifié = Rejet
+
+            try:
+                # 2. On cherche le projet dans la base
+                project = Project.objects.get(name=project_name)
+
+                # 3. On vérifie : Est-ce que c'est bien le chef qui demande ?
+                return project.author == request.user
+
+            # Le projet n'existe pas
+            except Project.DoesNotExist:
+                return False
+
+        # Pour les autres méthodes (GET, DELETE), on laisse passer ici,
+        # la vérification se fera dans has_object_permission
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        # Cette méthode sécurise le DELETE (supprimer un contributeur)
+        if request.method == "DELETE":
+            # 'obj' est ici l'objet Contributor
+            # On vérifie que l'utilisateur est l'auteur du projet lié
+            return obj.project.author == request.user
+
+        return True
