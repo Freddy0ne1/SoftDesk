@@ -19,7 +19,7 @@ class IsAuthorOrReadOnly(BasePermission):
 class IsProjectContributor(BasePermission):
     """
     Règle :
-    - L'utilisateur doit être contributeur du projet pour accéder à la ressource.
+    - L'utilisateur doit être contributeur du projet OU l'auteur pour accéder à la ressource.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -41,5 +41,11 @@ class IsProjectContributor(BasePermission):
         else:
             return False
 
-        # 2. On vérifie si l'utilisateur est dans la liste des contributeurs de ce projet
-        return project.contributors.filter(user=request.user).exists()
+        # 2. On vérifie les droits d'accès
+        # L'utilisateur passe s'il est dans la liste des contributeurs...
+        is_contributor = project.contributors.filter(user=request.user).exists()
+        
+        # ... OU s'il est l'auteur du projet (le patron) !
+        is_author = (project.author == request.user)
+
+        return is_contributor or is_author
