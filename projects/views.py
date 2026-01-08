@@ -1,26 +1,27 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-
 from .models import Project, Contributor, Issue, Comment
-from .serializers import ProjectListSerializer, ProjectRetrieveSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
+from .serializers import (
+    ProjectListSerializer,
+    ProjectRetrieveSerializer,
+    ContributorSerializer,
+    IssueSerializer,
+    CommentSerializer,
+)
+
+# On importe uniquement les permissions pertinentes pour les projets
 from .permissions import IsAuthorOrReadOnly, IsProjectContributor
-from authentication.permissions import IsOwnerOrSuperUser
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    Gestion des projets (Création, Lecture, Modification, Suppression).
+    Gestion des projets.
     """
-    # 1. Par défaut, on affiche tous les projets
+
     queryset = Project.objects.all()
 
     def get_serializer_class(self):
-        """
-        Choisit le serializer selon l'action.
-        - Si on demande la liste ("list") : on utilise ProjectListSerializer
-        - Sinon : on utilise ProjectRetrieveSerializer
-        """
         if self.action == "list":
             return ProjectListSerializer
         return ProjectRetrieveSerializer
@@ -28,49 +29,55 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """
         Définit les permissions selon l'action.
-        - Liste : Juste être connecté suffit (IsAuthenticated).
-        - Détail /Modif : Il faut être auteur ou contributeur du projet.
         """
         if self.action == "list":
-            # Tout le monde (connecté) peut voir la liste
+            # Liste : Juste être connecté suffit
             permission_classes = [IsAuthenticated]
         else:
-            # Pour voir le détail (/projects/1/), il faut être contributeur
-            permission_classes = [IsAuthenticated, IsProjectContributor, IsOwnerOrSuperUser]
+            # Détail/Modif : Il faut être Contributeur (pour voir) OU Auteur (pour modifier)
+            # On a retiré IsOwnerOrSuperUser qui bloquait tout le monde sauf l'admin
+            permission_classes = [
+                IsAuthenticated,
+                IsProjectContributor,
+                IsAuthorOrReadOnly,
+            ]
 
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Cette méthode permet d'assigner automatiquement l'auteur du projet
-        # à l'utilisateur qui envoie la requête (request.user)
         project = serializer.save(author=user)
-        # On ajoute automatiquement l'auteur comme contributeur
         Contributor.objects.create(user=user, project=project)
 
 
 class ContributorViewSet(viewsets.ModelViewSet):
     """
-    Gestion des contributeurs d'un projet.
+    Gestion des contributeurs.
     """
+
     queryset = Contributor.objects.all()
     serializer_class = ContributorSerializer
-    permission_classes = [IsOwnerOrSuperUser, IsProjectContributor]
+    # Ici, on garde IsProjectContributor pour vérifier que l'admin du projet a le droit d'agir
+    # Attention : pour la suppression, il faudra vérifier que c'est bien l'auteur du projet qui agit.
+    # Pour l'instant, on laisse simple.
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
 
 class IssueViewSet(viewsets.ModelViewSet):
-    
     queryset = Issue.objects.all()
     serializer_class = IssueSerializer
-    permission_classes = [IsOwnerOrSuperUser, IsProjectContributor, IsAuthorOrReadOnly]
+    # CORRECTION : On utilise IsAuthorOrReadOnly au lieu de IsOwnerOrSuperUser
+    permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthorOrReadOnly]
 
     def perform_create(self, serializer):
-        # L'auteur est automatiquement l'utilisateur connecté
         serializer.save(author=self.request.user)
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [IsOwnerOrSuperUser, IsProjectContributor, IsAuthorOrReadOnly]
+    # CORRECTION : Idem ici
+    permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthorOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
