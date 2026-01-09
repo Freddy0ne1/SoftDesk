@@ -1,47 +1,59 @@
+from rest_framework import serializers
 from authentication.models import User
 from .models import Project, Contributor, Issue, Comment
-from rest_framework import serializers
 
-
+# Constante pour uniformiser le format des dates dans toute l'API
+# read_only=True : La date est gérée automatiquement par Django (auto_now_add), on ne l'envoie jamais manuellement.
 CREATE_TIME = serializers.DateTimeField(format="%d-%m-%Y %H:%M", read_only=True)
 
+
 class ProjectRetrieveSerializer(serializers.ModelSerializer):
-    # On redéfinit le champ author.
-    # source='author.username' permet d'aller chercher le pseudo de l'utilisateur lié.
-    # ReadOnlyField assure que ce champ ne sert qu'à l'affichage (on ne peut pas le modifier directement).
+    """
+    Serializer complet pour l'affichage détaillé, la modification et la suppression d'un projet.
+    """
+    
+    # source='author.username' : On va chercher l'attribut 'username' de l'objet 'author'.
+    # Cela permet d'afficher "Alice" au lieu de l'ID "42".
     author = serializers.ReadOnlyField(source="author.username")
 
-    # On force le format Jour-Mois-Année Heure:Minute
+    # On applique le format de date personnalisé
     created_time = CREATE_TIME
 
     class Meta:
         model = Project
         fields = ["id", "name", "description", "type", "author", "created_time"]
-        # Note : 'author' est déjà en lecture seule grâce à la ligne au-dessus, 
-        # mais on laisse created_time ici.
+        # On protège created_time en lecture seule explicitement ici aussi
         read_only_fields = ["created_time"]
 
-# Serializer "Léger" pour la liste (Tout le monde)
+
 class ProjectListSerializer(serializers.ModelSerializer):
-    # On crée une liste des projets juste avec le nom et le type
+    """
+    Serializer allégé pour la liste des projets.
+    Optimise les performances en ne renvoyant que les infos essentielles.
+    """
+    
     class Meta:
         model = Project
         fields = ["id", "name", "type"]
-    
 
 
 class ContributorSerializer(serializers.ModelSerializer):
-    # SlugRelatedField permet d'utiliser le 'username' au lieu de l'ID
-    # queryset=... est nécessaire pour que l'API puisse retrouver l'utilisateur quand on lui envoie un pseudo
+    """
+    Serializer pour gérer les membres (Contributeurs) d'un projet.
+    Transforme les pseudos (Text) en objets User (Database) et vice-versa.
+    """
+
+    # SlugRelatedField : Permet d'utiliser le 'username' dans le JSON 
+    # au lieu de devoir connaître l'ID de l'utilisateur.
+    # queryset=User.objects.all() : Indispensable pour que Django puisse retrouver l'user "Toto" en base.
     user = serializers.SlugRelatedField(
         queryset=User.objects.all(),
         slug_field="username"
     )
     
-    # On force le format Jour-Mois-Année Heure:Minute
     created_time = CREATE_TIME
     
-    # On peut faire pareil pour le projet si tu veux voir son nom au lieu de son ID
+    # Idem pour le projet : on peut l'identifier par son nom unique.
     project = serializers.SlugRelatedField(
         queryset=Project.objects.all(),
         slug_field="name"
@@ -54,20 +66,25 @@ class ContributorSerializer(serializers.ModelSerializer):
 
 
 class IssueSerializer(serializers.ModelSerializer):
-    # On affiche les noms au lieu des ID pour la lisibilité
+    """
+    Serializer pour les Problèmes (Issues).
+    Contient une validation complexe pour vérifier l'assignation.
+    """
+
+    # Affichage du nom de l'auteur (Lecture seule)
     author = serializers.ReadOnlyField(source="author.username")
     
-    # Pour l'assigné, on veut pouvoir choisir via le pseudo (Lecture et Écriture)
+    # L'assigné est choisi via son pseudo.
+    # required=False : Une issue peut n'être assignée à personne au début.
     assignee = serializers.SlugRelatedField(
         queryset=User.objects.all(),
         slug_field="username",
-        required=False # Ce champ n'est pas obligatoire
+        required=False 
     )
     
-    # On force le format Jour-Mois-Année Heure:Minute
     created_time = CREATE_TIME
     
-    # Pour le projet, on choisit via son nom exact (ou tu peux laisser l'ID par défaut si tu préfères)
+    # Le projet est choisi via son nom.
     project = serializers.SlugRelatedField(
         queryset=Project.objects.all(),
         slug_field="name"
@@ -75,29 +92,35 @@ class IssueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Issue
-        fields = ["id", "title", "description", "tag", "priority", "status", "project", "author", "assignee", "created_time"]
+        fields = [
+            "id", "title", "description", "tag", "priority", 
+            "status", "project", "author", "assignee", "created_time"
+        ]
         read_only_fields = ["author", "created_time"]
 
     def validate(self, data):
         """
-        Vérification de sécurité : 
-        L'utilisateur 'assignee' DOIT faire partie du projet 'project'.
+        Validation personnalisée (niveau Objet).
+        Règle métier : On ne peut assigner une tâche qu'à un membre du projet.
         """
-        # 1. Récupération des objets (DRF a déjà converti les strings en Objets grâce aux SlugRelatedField)
+        # 1. On récupère les données entrantes (converties en objets par les SlugFields)
         project = data.get('project')
         assignee = data.get('assignee')
 
-        # Cas de la modification (PUT/PATCH) où le projet n'est pas redonné
+        # Cas particulier du PATCH (mise à jour partielle) :
+        # Si le projet n'est pas dans les données envoyées, on récupère celui de l'issue existante.
         if self.instance and not project:
             project = self.instance.project
 
-        # 2. Si on tente d'assigner quelqu'un
+        # 2. Si un assigné est défini, on lance l'enquête de sécurité
         if assignee:
-            # Vérif 1 : Est-il dans la table des contributeurs ?
+            # Vérif A : Est-ce un contributeur officiel ?
             is_contributor = Contributor.objects.filter(user=assignee, project=project).exists()
-            # Vérif 2 : Est-il l'auteur du projet (le chef) ?
+            
+            # Vérif B : Est-ce l'auteur du projet (le chef) ?
             is_author = (project.author == assignee)
 
+            # Si ce n'est ni l'un ni l'autre => ERREUR
             if not is_contributor and not is_author:
                 raise serializers.ValidationError(
                     {"assignee": f"L'utilisateur '{assignee.username}' ne fait pas partie du projet '{project.name}'."}
@@ -105,14 +128,17 @@ class IssueSerializer(serializers.ModelSerializer):
 
         return data
 
+
 class CommentSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour les Commentaires.
+    """
+    
+    # Auteur en lecture seule (pseudo)
     author = serializers.ReadOnlyField(source="author.username")
     
-    # On force le format Jour-Mois-Année Heure:Minute
     created_time = CREATE_TIME
     
-    # Pour lier à l'issue, on utilise son ID (par défaut) car les titres peuvent être longs ou en doublon
-    # Mais on peut afficher le titre si tu veux (via un SerializerMethodField), restons simple pour l'instant.
 
     class Meta:
         model = Comment
